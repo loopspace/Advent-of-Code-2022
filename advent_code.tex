@@ -1,0 +1,42 @@
+\documentclass{article}
+
+\usepackage{fontspec}
+\usepackage{unicode-math}
+
+\usepackage{fancyvrb}
+
+\usepackage{hyperref}
+
+\setmainfont{TeX Gyre Pagella}
+\setmathfont{TeX Gyre Pagella Math}
+
+\input{answers.code.tex}
+
+\title{Advent of Code 2022: \LaTeX3 Solutions}
+\author{Andrew Stacey \\ \url{loopspace@mathforge.org}}
+\date{2022-12-01}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+This is my attempt to solve the Advent of Code 2022 problems in \LaTeX3.
+
+Following from last year, I'm abandoning the \Verb!dtx! file format and using just a normal \LaTeX\ file and will input a \LaTeX3 file that actually contains the code.
+
+\section{Solutions}
+
+\subsection{Day 01}
+
+I'm not a fan of optimisation for its own sake, so for the second part of the challenge then I used a scratch sequence which I prepopulated with three zeros.
+After working out each elf's quota, I added it to the sequence, then sorted the sequence, and removed the smallest value.
+This is decidedly not optimal, but it was fast enough.
+
+\begin{enumerate}
+\item The largest amount of calories carried by a single elf is: \MaxCalories*{Day01}
+\item The amount of calories carried by the three elves carrying the most is: \MaxCalories{Day01}
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,153 @@
+\ExplSyntaxOn
+
+% These are our output stack variables
+\tl_new:N \g__aoc_output_tl
+\int_new:N \g__aoc_output_int
+\seq_new:N \g__aoc_output_seq
+\bool_new:N \g__aoc_output_bool
+\prop_new:N \g__aoc_output_prop
+
+% To avoid creating vast numbers of variables, we provide ourselves with a few that we reuse frequently.
+% For that reason, most of them don't have very exciting names.
+
+% These are general purpose variables.
+\tl_new:N \l__aoc_tmpa_tl
+\tl_new:N \l__aoc_tmpb_tl
+\tl_new:N \l__aoc_tmpc_tl
+\tl_new:N \l__aoc_tmpd_tl
+\tl_new:N \l__aoc_tmpe_tl
+\tl_new:N \l__aoc_tmpf_tl
+\tl_new:N \l__aoc_tmpg_tl
+\tl_new:N \l__aoc_tmph_tl
+\tl_new:N \l__aoc_tmpi_tl
+
+\str_new:N \l__aoc_tmpa_str
+\str_new:N \l__aoc_tmpb_str
+\str_new:N \l__aoc_tmpc_str
+
+\seq_new:N \l__aoc_tmpa_seq
+\seq_new:N \l__aoc_tmpb_seq
+\seq_new:N \l__aoc_tmpc_seq
+
+\dim_new:N \l__aoc_tmpa_dim
+\dim_new:N \l__aoc_tmpb_dim
+
+\fp_new:N \l__aoc_tmpa_fp
+\fp_new:N \l__aoc_tmpb_fp
+\fp_new:N \l__aoc_tmpc_fp
+\fp_new:N \l__aoc_tmpd_fp
+\fp_new:N \l__aoc_tmpe_fp
+\fp_new:N \l__aoc_tmpf_fp
+
+\int_new:N \l__aoc_tmpa_int
+\int_new:N \l__aoc_tmpb_int
+\int_new:N \l__aoc_tmpc_int
+\int_new:N \l__aoc_tmpd_int
+\int_new:N \l__aoc_tmpe_int
+\int_new:N \l__aoc_tmpf_int
+\int_new:N \l__aoc_tmpg_int
+
+\bool_new:N \l__aoc_tmpa_bool
+\bool_new:N \l__aoc_tmpb_bool
+
+\ior_new:N \l__aoc_tmpa_ior
+\iow_new:N \l__aoc_tmpa_iow
+
+\prop_new:N \l__aoc_tmpa_prop
+\prop_new:N \l__aoc_tmpb_prop
+\prop_new:N \l__aoc_tmpc_prop
+
+\msg_new:nnn
+ { advent }
+ { missing file }
+ { File~ #1~ doesn't~ exist~ \msg_line_context:}
+
+
+% Day 01: Counting Calories
+\cs_new_protected_nopar:Npn \aoc_max_calories:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    % That was successful, so now initialise our variables.
+    % We have an integer that carries the current count of calories and then a sequence that stores the current top three counts.
+    \int_zero:N \l__aoc_tmpa_int
+    \seq_clear:N \l__aoc_tmpa_seq
+    \seq_put_right:Nn \l__aoc_tmpa_seq {0}
+    \seq_put_right:Nn \l__aoc_tmpa_seq {0}
+    \seq_put_right:Nn \l__aoc_tmpa_seq {0}
+
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \tl_if_eq:nnTF {##1} {\par}
+      {
+        % Add our current count to the sequence
+        \seq_put_right:NV \l__aoc_tmpa_seq \l__aoc_tmpa_int
+        % Sort the sequence
+        \seq_sort:Nn \l__aoc_tmpa_seq {
+          \int_compare:nNnTF { ####1 } > { ####2 }
+          { \sort_return_swapped: }
+          { \sort_return_same: }
+        }
+        % Remove the lowest
+        \seq_pop_left:NN \l__aoc_tmpa_seq \l__aoc_tmpa_tl
+        % Zero the count
+        \int_zero:N \l__aoc_tmpa_int
+      }
+      {
+        \int_add:Nn \l__aoc_tmpa_int {##1}
+      }
+    }      
+    % Add our current count to the sequence
+    \seq_put_right:NV \l__aoc_tmpa_seq \l__aoc_tmpa_int
+    % Sort the sequence
+    \seq_sort:Nn \l__aoc_tmpa_seq {
+      \int_compare:nNnTF { ##1 } > { ##2 }
+      { \sort_return_swapped: }
+      { \sort_return_same: }
+    }
+    % Remove the lowest
+    \seq_pop_left:NN \l__aoc_tmpa_seq \l__aoc_tmpa_tl
+    \seq_gset_eq:NN \g__aoc_output_seq \l__aoc_tmpa_seq
+    \ior_close:N \l__aoc_tmpa_ior
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\DeclareDocumentCommand \MaxCalories { s m }
+{
+  \aoc_max_calories:n {#2}
+  \int_zero:N \l__aoc_tmpa_int
+  \IfBooleanTF {#1}
+  {
+    \int_set:Nn \l__aoc_tmpa_int
+    {
+      \seq_item:Nn \g__aoc_output_seq {3}
+    }
+  }
+  {
+    \int_add:Nn \l__aoc_tmpa_int
+    {
+      \seq_item:Nn \g__aoc_output_seq {1}
+    }
+    \int_add:Nn \l__aoc_tmpa_int
+    {
+      \seq_item:Nn \g__aoc_output_seq {2}
+    }
+    \int_add:Nn \l__aoc_tmpa_int
+    {
+      \seq_item:Nn \g__aoc_output_seq {3}
+    }
+  }
+  \int_use:N \l__aoc_tmpa_int
+  \int_zero:N \l__aoc_tmpa_int
+  \seq_gclear:N\g__aoc_output_seq
+}
+
+
+\ExplSyntaxOff
