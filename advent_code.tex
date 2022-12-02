@@ -25,6 +25,8 @@
 This is my attempt to solve the Advent of Code 2022 problems in \LaTeX3.
 
 Following from last year, I'm abandoning the \Verb!dtx! file format and using just a normal \LaTeX\ file and will input a \LaTeX3 file that actually contains the code.
+From the outset I'm also using the caching system that I developed during last year's calendar.
+
 
 \section{Solutions}
 
@@ -37,6 +39,28 @@ This is decidedly not optimal, but it was fast enough.
 \begin{enumerate}
 \item The largest amount of calories carried by a single elf is: \MaxCalories*{Day01}
 \item The amount of calories carried by the three elves carrying the most is: \MaxCalories{Day01}
+\end{enumerate}
+
+\subsection{Day 02}
+
+This one was a bit of modular arithmetic -- convert the letters to numbers \(0\) to \(2\), then use modular arithmetic to figure out who won.
+If \(x\) is the opponent's play and \(y\) the elf's strategy, then the winning score is given by:
+%
+\[
+  z = y - x \mod 3
+  \]
+%
+where \(z = 0\) is a draw, \(-1\) a loss, and \(1\) a win.
+To convert it to points, we need \(3 \times z\) for the game score and \(y + 1\) for the points for the play.
+
+If given the desired outcome, we can recover \(y\) via \(x + z \mod 3\).
+
+The only catch is that \LaTeX3 uses signed modular arithmetic, so \(-2 \mod 3\) is \(-2\).
+To guard against this, we add \(3\) from time to time.
+
+\begin{enumerate}
+\item The score for the simple strategy is: \RPSScore*{Day02}
+\item The score for the trickier strategy is: \RPSScore{Day02}
 \end{enumerate}
 
 \end{document}

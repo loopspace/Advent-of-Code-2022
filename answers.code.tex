@@ -58,9 +58,89 @@
 \prop_new:N \l__aoc_tmpc_prop
 
 \msg_new:nnn
- { advent }
- { missing file }
- { File~ #1~ doesn't~ exist~ \msg_line_context:}
+{ advent }
+{ missing file }
+{ File~ #1~ doesn't~ exist~ \msg_line_context:}
+
+
+% Caching
+
+\prop_new:N \g__aoc_answers_prop
+
+\file_get:nnNT {advent_answers.txt} {} \l__aoc_tmpa_tl
+{
+  \tl_use:N \l__aoc_tmpa_tl
+}
+
+\prop_gremove:Nn \g__aoc_answers_prop {Template}
+
+\AddToHook {enddocument} 
+{
+  \iow_open:Nn \l__aoc_tmpa_iow {advent_answers.txt}
+  \prop_map_inline:Nn \g__aoc_answers_prop
+  {
+    \iow_now:Nn \l__aoc_tmpa_iow
+    {
+      \prop_gput:Nnn \g__aoc_answers_prop {#1} {#2}
+    }
+  }
+  \iow_close:N \l__aoc_tmpa_iow
+}
+
+% Clear the outputs
+\cs_new_protected_nopar:Npn \aoc_clear_outputs:
+{
+  \tl_gclear:N \g__aoc_output_tl
+  \int_gzero:N \g__aoc_output_int
+  \seq_gclear:N \g__aoc_output_seq
+  \bool_gset_false:N \g__aoc_output_bool
+  \prop_gclear:N \g__aoc_output_prop
+}
+
+
+\tl_const:Nn \c__aoc_tl_tl {tl}
+\tl_const:Nn \c__aoc_int_tl {int}
+\tl_const:Nn \c__aoc_seq_tl {seq}
+\tl_const:Nn \c__aoc_bool_tl {bool}
+\tl_const:Nn \c__aoc_prop_tl {prop}
+\bool_new:N \g__aoc_regenerate_next_bool
+
+\cs_new_protected_nopar:Npn \aoc_check_answer:nnn #1#2#3
+{
+  \group_begin:
+  \tl_set:Nn \l__aoc_tmpb_tl {#1}
+  \bool_if:nTF
+  {
+    !\g__aoc_regenerate_next_bool
+    &&
+    \prop_if_in_p:Nn \g__aoc_answers_prop {#2}
+  }
+  {
+    \prop_get:NnN \g__aoc_answers_prop {#2} \l__aoc_tmpa_tl
+    \tl_case:Nn \l__aoc_tmpb_tl
+    {
+      \c__aoc_tl_tl {\tl_gset_eq:NN \g__aoc_output_tl \l__aoc_tmpa_tl}
+      \c__aoc_int_tl {\int_gset:Nn \g__aoc_output_int {\tl_use:N \l__aoc_tmpa_tl}}
+      \c__aoc_seq_tl {\exp_args:NNV\seq_gset_from_clist:Nn \g__aoc_output_seq \l__aoc_tmpa_tl}
+    }
+  }
+  {
+    \iow_log:n {Calculating~ solution~ for~ #2.}
+    #3
+    \tl_case:Nn \l__aoc_tmpb_tl
+    {
+      \c__aoc_tl_tl {\prop_gput:NnV \g__aoc_answers_prop {#2} \g__aoc_output_tl}
+      \c__aoc_int_tl {\prop_gput:NnV \g__aoc_answers_prop {#2} \g__aoc_output_int}
+      \c__aoc_seq_tl
+      {
+        \prop_gput:Nnx \g__aoc_answers_prop {#2} {\seq_use:Nn \g__aoc_output_seq {,}}
+      }
+    }
+  }
+  \bool_gset_false:N \g__aoc_regenerate_next_bool
+  \group_end:
+}
+\cs_generate_variant:Nn \_aoc_check_answer:nnn {nVn,nxn}
 
 
 % Day 01: Counting Calories
@@ -121,7 +201,11 @@
 
 \DeclareDocumentCommand \MaxCalories { s m }
 {
-  \aoc_max_calories:n {#2}
+  \aoc_check_answer:nnn {seq} {Calories}
+  {
+    \aoc_max_calories:n {#2}
+  }
+
   \int_zero:N \l__aoc_tmpa_int
   \IfBooleanTF {#1}
   {
@@ -146,7 +230,125 @@
   }
   \int_use:N \l__aoc_tmpa_int
   \int_zero:N \l__aoc_tmpa_int
-  \seq_gclear:N\g__aoc_output_seq
+  \aoc_clear_outputs:
+}
+
+% Day 02: Rock Paper Scissors
+
+% First version
+\cs_new_protected_nopar:Npn \aoc_rps_score_a:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \int_zero:N \l__aoc_tmpc_int
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \tl_set:Nn \l__aoc_tmpa_tl {##1}
+      \tl_set:Nx \l__aoc_tmpb_tl {\tl_item:Nn \l__aoc_tmpa_tl {2}}
+      \tl_set:Nx \l__aoc_tmpa_tl {\tl_item:Nn \l__aoc_tmpa_tl {1}}
+      \int_set:Nn \l__aoc_tmpa_int {\exp_args:Nc `{\l__aoc_tmpa_tl} - 65}
+      \int_set:Nn \l__aoc_tmpb_int {\exp_args:Nc `{\l__aoc_tmpb_tl} - 88}
+
+      % Add the score for the choice of RPS
+      \int_add:Nn \l__aoc_tmpc_int {\l__aoc_tmpb_int + 1}
+      % Add the score for the round
+      \int_set:Nn \l__aoc_tmpa_int { \int_mod:nn {\l__aoc_tmpb_int - \l__aoc_tmpa_int + 4} {3} }
+      \int_add:Nn \l__aoc_tmpc_int {3 * \l__aoc_tmpa_int}
+      
+    }
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpc_int
+    \ior_close:N \l__aoc_tmpa_ior
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+% Second version
+\cs_new_protected_nopar:Npn \aoc_rps_score_b:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \int_zero:N \l__aoc_tmpc_int
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \tl_set:Nn \l__aoc_tmpa_tl {##1}
+      \tl_set:Nx \l__aoc_tmpb_tl {\tl_item:Nn \l__aoc_tmpa_tl {2}}
+      \tl_set:Nx \l__aoc_tmpa_tl {\tl_item:Nn \l__aoc_tmpa_tl {1}}
+      \int_set:Nn \l__aoc_tmpa_int {\exp_args:Nc `{\l__aoc_tmpa_tl} - 65}
+      \int_set:Nn \l__aoc_tmpb_int {\exp_args:Nc `{\l__aoc_tmpb_tl} - 88}
+
+      % Add the score for the choice of outcome
+      \int_add:Nn \l__aoc_tmpc_int {3*(\l__aoc_tmpb_int )}
+      % Figure out the play
+      \int_set:Nn \l__aoc_tmpb_int { \int_mod:nn { \l__aoc_tmpa_int + \l__aoc_tmpb_int + 2 }{3} }
+      \int_add:Nn \l__aoc_tmpc_int { \l__aoc_tmpb_int + 1}
+      
+    }
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpc_int
+    \ior_close:N \l__aoc_tmpa_ior
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\DeclareDocumentCommand \RPSScore {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \aoc_check_answer:nnn {int} {RPSScoreA}
+    {
+      \aoc_rps_score_a:n {#2}
+    }
+  }
+  {
+    \aoc_check_answer:nnn {int} {RPSScoreB}
+    {
+      \aoc_rps_score_b:n {#2}
+    }
+  }
+  \int_use:N \g__aoc_output_int
+  \aoc_clear_outputs:
+}
+
+% Template
+
+\cs_new_protected_nopar:Npn \aoc_template:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+    }      
+    \ior_close:N \l__aoc_tmpa_ior
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\NewDocumentCommand \Template {m}
+{
+  \bool_gset_true:N \g__aoc_regenerate_next_bool
+  \aoc_check_answer:nnn {tl} {Template}
+  {
+    %
+  }
+  \tl_use:N \g__aoc_output_tl
+  \aoc_clear_outputs:
 }
 
 
