@@ -1,5 +1,14 @@
 \ExplSyntaxOn
 
+% Variants of standard functions
+
+\cs_generate_variant:Nn \file_get:nnNT {VnNT}
+\cs_generate_variant:Nn \iow_open:Nn {NV}
+\cs_generate_variant:Nn \tl_if_in:nnTF {Vn}
+\cs_generate_variant:Nn \tl_if_in:nnT {Vn}
+\cs_generate_variant:Nn \tl_if_in:nnF {Vn}
+
+
 % These are our output stack variables
 \tl_new:N \g__aoc_output_tl
 \int_new:N \g__aoc_output_int
@@ -66,8 +75,12 @@
 % Caching
 
 \prop_new:N \g__aoc_answers_prop
+\tl_new:N \g__aoc_answers_file_tl
+\tl_gset:Nn \g__aoc_answers_file_tl {2022_answers}
+\tl_gput_right:Nn \g__aoc_answers_file_tl {.txt}
 
-\file_get:nnNT {advent_answers.txt} {} \l__aoc_tmpa_tl
+
+\file_get:VnNT \g__aoc_answers_file_tl {} \l__aoc_tmpa_tl
 {
   \tl_use:N \l__aoc_tmpa_tl
 }
@@ -76,7 +89,7 @@
 
 \AddToHook {enddocument} 
 {
-  \iow_open:Nn \l__aoc_tmpa_iow {advent_answers.txt}
+  \iow_open:NV \l__aoc_tmpa_iow \g__aoc_answers_file_tl
   \prop_map_inline:Nn \g__aoc_answers_prop
   {
     \iow_now:Nn \l__aoc_tmpa_iow
@@ -319,6 +332,118 @@
   \int_use:N \g__aoc_output_int
   \aoc_clear_outputs:
 }
+
+\cs_new_protected_nopar:Npn \aoc_rucksack_one_line:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \int_zero:N \l__aoc_tmpb_int
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \int_set:Nn \l__aoc_tmpa_int {\tl_count:n {##1}}
+      \tl_set:Nx \l__aoc_tmpa_tl {\tl_range:nnn {##1} {1} {\l__aoc_tmpa_int/2}}
+      \tl_set:Nx \l__aoc_tmpb_tl {\tl_range:nnn {##1} {\l__aoc_tmpa_int/2+1} {-1}}
+      \tl_map_inline:Nn \l__aoc_tmpa_tl
+      {
+        \tl_if_in:VnT \l__aoc_tmpb_tl {####1}
+        {
+          \int_compare:nTF
+          {
+            \exp_args:Nc `{####1} > 96
+          }
+          {
+            \int_add:Nn \l__aoc_tmpb_int {\exp_args:Nc `{####1} - 96}
+          }
+          {
+            \int_add:Nn \l__aoc_tmpb_int {\exp_args:Nc `{####1} - 64 + 26}
+          }
+          \tl_map_break:
+        }
+      }
+    }
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpb_int
+    \ior_close:N \l__aoc_tmpa_ior
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\cs_new_protected_nopar:Npn \aoc_rucksack_three_lines:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \int_zero:N \l__aoc_tmpb_int
+    \seq_clear:N \l__aoc_tmpa_seq
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \seq_put_right:Nn \l__aoc_tmpa_seq {##1}
+      \int_compare:nT { \seq_count:N \l__aoc_tmpa_seq = 3 }
+      {
+        \seq_pop_left:NN \l__aoc_tmpa_seq \l__aoc_tmpa_tl
+        \seq_pop_left:NN \l__aoc_tmpa_seq \l__aoc_tmpb_tl
+        \seq_pop_left:NN \l__aoc_tmpa_seq \l__aoc_tmpc_tl
+
+        \tl_map_inline:Nn \l__aoc_tmpa_tl
+        {
+          \tl_if_in:VnT \l__aoc_tmpb_tl {####1}
+          {
+            \tl_if_in:VnT \l__aoc_tmpc_tl {####1}
+            {
+              \int_compare:nTF
+              {
+                \exp_args:Nc `{####1} > 96
+              }
+              {
+                \int_add:Nn \l__aoc_tmpb_int {\exp_args:Nc `{####1} - 96}
+              }
+              {
+                \int_add:Nn \l__aoc_tmpb_int {\exp_args:Nc `{####1} - 64 + 26}
+              }
+              \tl_map_break:
+              
+            }
+          }
+        }
+      }
+    }
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpb_int
+    \ior_close:N \l__aoc_tmpa_ior
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\prop_gremove:Nn \g__aoc_answers_prop {Rucksack}
+\NewDocumentCommand \Rucksack {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \aoc_check_answer:nnn {int} {RucksackOne}
+    {
+      \aoc_rucksack_one_line:n {#2}
+    }
+  }
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {int} {RucksackThree}
+    {
+      \aoc_rucksack_three_lines:n {#2}
+    }
+  }
+  \int_use:N \g__aoc_output_int
+  \aoc_clear_outputs:
+}
+
 
 % Template
 

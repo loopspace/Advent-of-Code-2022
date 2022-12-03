@@ -14,3 +14,10 @@ I'm using the same function paradigm whereby a "function" defines a
 scope and so to return a value then there are certain `output`
 registers (one of each type) that get set globally, and which can then
 be read for the solution.
+
+Part way through last time I implemented a caching system to save the
+answers to a file and then read them back in at the start.
+I've copied that across to this year.
+The format of the cache is a LaTeX3 `prop`, so reading it back in
+populates the `prop` from which the cached answers can be read (or
+deleted if I need to regenerate one).

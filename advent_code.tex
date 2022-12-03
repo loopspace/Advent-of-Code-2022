@@ -16,6 +16,8 @@
 \author{Andrew Stacey \\ \url{loopspace@mathforge.org}}
 \date{2022-12-01}
 
+\renewcommand\thesubsection{Day \arabic{subsection}:}
+
 \begin{document}
 
 \maketitle
@@ -30,7 +32,7 @@ From the outset I'm also using the caching system that I developed during last y
 
 \section{Solutions}
 
-\subsection{Day 01}
+\subsection{Calories}
 
 I'm not a fan of optimisation for its own sake, so for the second part of the challenge then I used a scratch sequence which I prepopulated with three zeros.
 After working out each elf's quota, I added it to the sequence, then sorted the sequence, and removed the smallest value.
@@ -41,7 +43,7 @@ This is decidedly not optimal, but it was fast enough.
 \item The amount of calories carried by the three elves carrying the most is: \MaxCalories{Day01}
 \end{enumerate}
 
-\subsection{Day 02}
+\subsection{Rock, Paper, Scissors}
 
 This one was a bit of modular arithmetic -- convert the letters to numbers \(0\) to \(2\), then use modular arithmetic to figure out who won.
 If \(x\) is the opponent's play and \(y\) the elf's strategy, then the winning score is given by:
@@ -61,6 +63,17 @@ To guard against this, we add \(3\) from time to time.
 \begin{enumerate}
 \item The score for the simple strategy is: \RPSScore*{Day02}
 \item The score for the trickier strategy is: \RPSScore{Day02}
+\end{enumerate}
+
+\subsection{Rucksacks}
+
+Fairly straightforward, this one.
+I toyed with being a bit creative on the ways to figure out the overlaps between the token lists, but in the end \Verb!\tl_if_in! was too straightforward to ignore.
+I didn't know about \Verb!\tl_range:nnn! before this, which is a nice thing to add to my repertoire.
+
+\begin{enumerate}
+\item The sum of the priorities of the overlapping items in the rucksacks is: \Rucksack*{Day03}
+\item The sum of the priorities of the badges in the rucksacks is: \Rucksack{Day03}
 \end{enumerate}
 
 \end{document}
