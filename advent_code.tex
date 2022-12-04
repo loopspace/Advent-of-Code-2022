@@ -76,4 +76,16 @@ I didn't know about \Verb!\tl_range:nnn! before this, which is a nice thing to a
 \item The sum of the priorities of the badges in the rucksacks is: \Rucksack{Day03}
 \end{enumerate}
 
+\subsection{Camp Cleanup}
+
+The nice thing about this one is that parsing the input is really easy with \TeX\ due to the more complicated parameter specification.
+I defined an auxiliary function that had a parameter pattern of \Verb!#1-#2,#3-#4! and fed it each line.
+
+For the question as to whether the intervals overlap, it's easier to determine the non-overlaps than the overlaps: \([a,b]\) and \([c,d]\) don't overlap if \(b < c\) or \(d < a\).
+
+\begin{enumerate}
+\item The number of completely redundant cleanups is: \CampCleanup*{Day04}
+\item The number of cleanups with overlaps is: \CampCleanup{Day04}
+\end{enumerate}
+
 \end{document}

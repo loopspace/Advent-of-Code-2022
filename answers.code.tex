@@ -445,6 +445,105 @@
 }
 
 
+% Camp Cleanup
+
+\cs_new_protected_nopar:Npn \aoc_camp_cleanup_contained:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \int_zero:N \l__aoc_tmpe_int
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \__aoc_camp_cleanup_aux:w ##1 \q_stop
+      \bool_if:nT
+      {
+        (
+        \int_compare_p:n {\l__aoc_tmpa_int <= \l__aoc_tmpc_int}
+        &&
+        \int_compare_p:n {\l__aoc_tmpb_int >= \l__aoc_tmpd_int}
+        )
+        ||
+        (
+        \int_compare_p:n {\l__aoc_tmpa_int >= \l__aoc_tmpc_int}
+        &&
+        \int_compare_p:n {\l__aoc_tmpb_int <= \l__aoc_tmpd_int}
+        )
+      }
+      {
+        \int_incr:N \l__aoc_tmpe_int
+      }
+    }      
+    \ior_close:N \l__aoc_tmpa_ior
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpe_int
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\cs_new_protected_nopar:Npn \aoc_camp_cleanup_overlap:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \int_zero:N \l__aoc_tmpe_int
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \__aoc_camp_cleanup_aux:w ##1 \q_stop
+      \bool_if:nF
+      {
+        \int_compare_p:n {\l__aoc_tmpd_int < \l__aoc_tmpa_int}
+        ||
+        \int_compare_p:n {\l__aoc_tmpb_int < \l__aoc_tmpc_int}
+      }
+      {
+        \int_incr:N \l__aoc_tmpe_int
+      }
+    }      
+    \ior_close:N \l__aoc_tmpa_ior
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpe_int
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\cs_new_protected_nopar:Npn \__aoc_camp_cleanup_aux:w #1-#2,#3-#4 \q_stop
+{
+  \int_set:Nn \l__aoc_tmpa_int {#1}
+  \int_set:Nn \l__aoc_tmpb_int {#2}
+  \int_set:Nn \l__aoc_tmpc_int {#3}
+  \int_set:Nn \l__aoc_tmpd_int {#4}
+}
+
+\NewDocumentCommand \CampCleanup {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \aoc_check_answer:nnn {int} {CampCleanupContain}
+    {
+      \aoc_camp_cleanup_contained:n {#2}
+    }
+  }
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {int} {CampCleanupOverlap}
+    {
+      \aoc_camp_cleanup_overlap:n {#2}
+    }
+  }
+  \int_use:N \g__aoc_output_int
+  \aoc_clear_outputs:
+}
+
+
 % Template
 
 \cs_new_protected_nopar:Npn \aoc_template:n #1
