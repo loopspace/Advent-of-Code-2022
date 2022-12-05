@@ -544,6 +544,98 @@
 }
 
 
+% Supply Stacks
+
+\cs_new_protected_nopar:Npn \aoc_stack:nn #1#2
+{
+  \group_begin:
+  \bool_set:Nn \l__aoc_tmpa_bool {\tl_if_empty_p:n {#1}}
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#2 .txt}
+  {
+
+    \int_step_inline:nnn {1} {9}
+    {
+      \tl_clear_new:c {l__aoc_stack_##1_tl}
+    }
+
+    \ior_str_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \tl_if_empty:nT {##1}
+      {
+        \ior_map_break:
+      }
+      \int_step_inline:nnn {1} {9}
+      {
+        \tl_put_right:cx {l__aoc_stack_####1_tl}
+        {
+          \str_item:nn {##1} {4*####1 - 2}
+        }
+      }
+    }
+
+    \int_step_inline:nnn {1} {9}
+    {
+      \tl_trim_spaces:c {l__aoc_stack_##1_tl}
+      \tl_reverse:c {l__aoc_stack_##1_tl}
+      \tl_set:cx {l__aoc_stack_##1_tl} {\tl_tail:v {l__aoc_stack_##1_tl}}
+      \tl_reverse:c {l__aoc_stack_##1_tl}
+    }
+
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \aoc_stack_aux:w ##1 \q_stop
+    }
+    \ior_close:N \l__aoc_tmpa_ior
+    \tl_gclear:N \g__aoc_output_tl
+    \int_step_inline:nnn {1} {9}
+    {
+      \tl_gput_right:Nx \g__aoc_output_tl {\tl_head:v {l__aoc_stack_##1_tl}}
+    }
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#2}
+  }
+  \group_end:
+}
+
+\cs_new_protected_nopar:Npn \aoc_stack_aux:w move~ #1 ~from~ #2 ~to~ #3~ \q_stop
+{
+  \tl_clear:N \l__aoc_tmpa_tl
+  \prg_replicate:nn {#1}
+  {
+    \tl_put_left:Nx \l__aoc_tmpa_tl {\tl_head:v {l__aoc_stack_#2_tl}}
+    \tl_set:cx {l__aoc_stack_#2_tl} {\tl_tail:v {l__aoc_stack_#2_tl}}
+  }
+  \bool_if:NT \l__aoc_tmpa_bool
+  {
+    \tl_reverse:N \l__aoc_tmpa_tl
+  }
+  \tl_put_left:cV {l__aoc_stack_#3_tl} \l__aoc_tmpa_tl
+}
+
+\NewDocumentCommand \SupplyStacks {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {tl} {SupplyStack9000}
+    {
+      \aoc_stack:nn {a} {#2}
+    }
+  }
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {tl} {SupplyStack9001}
+    {
+      \aoc_stack:nn {} {#2}
+    }
+  }
+  \tl_use:N \g__aoc_output_tl
+  \aoc_clear_outputs:
+}
+
 % Template
 
 \cs_new_protected_nopar:Npn \aoc_template:n #1

@@ -88,4 +88,30 @@ For the question as to whether the intervals overlap, it's easier to determine t
 \item The number of cleanups with overlaps is: \CampCleanup{Day04}
 \end{enumerate}
 
+\subsection{Supply Stacks}
+
+This challenge presents two problems.
+The first is an irritation with how the input is presented: the initial states of the crates is described as a set of \emph{vertical} lists.
+This means that each line corresponds to a level rather than to a stack.
+So the data has to be read with full positional information intact, whereas \TeX\ has a nasty habit of swallowing spaces.
+So I needed to use \Verb!\ior_str_map_inline! for this one to read in the input as type \Verb!str! rather than \Verb!tl!.
+
+The second is more about implementation.
+The \LaTeX3 team have provided a decent set of data types, with property lists, sequences, token lists, integers, and so on.
+However, \TeX's underlying system -- as a macro expansion language -- makes it tricky to define derived data types.
+It's hard to have a sequence of sequences, for example.
+Or even a sequence of token lists where the individual token lists can be acted upon whilst staying as part of the sequence.
+It relates to the fact that \TeX\ more naturally works as pass-by-value rather than pass-by-reference.
+While the latter is possible (it's the \Verb!N! type in \LaTeX3), then it isn't really full pass-by-reference because we're passing in the \emph{name} of the variable, which could then conflict with names used within the function.
+Tied up with this is that anonymous variables don't really exist.
+
+So what I'd really like here is a sequence of token lists where I could manipulate each token list while maintaining its position in the sequence.
+Rather than try to figure out how to do that properly, I went for the easier option of using dynamic names and building the index into the naming convention.
+So rather than having an actual sequence, I had macros of the form \Verb!\l__aoc_stack_1_tl!, only to get the \Verb!1! in there I had to make good use of the \Verb!c! argument.
+
+\begin{enumerate}
+\item With the CrateMaster9000, the top crates on the stacks were: \SupplyStacks*{Day05}
+\item With the CrateMaster9001, the top crates on the stacks were: \SupplyStacks{Day05}
+\end{enumerate}
+
 \end{document}
