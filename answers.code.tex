@@ -636,6 +636,82 @@
   \aoc_clear_outputs:
 }
 
+% Tuning Trouble
+
+\cs_new_protected_nopar:Npn \aoc_tuning:nn #1#2
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#2 .txt}
+  {
+    \int_step_inline:nnn {1} {#1}
+    {
+      \tl_clear_new:c {l__aoc_tmpa_##1_tl}
+    }
+
+    \int_zero:N \l__aoc_tmpa_int
+    \ior_get:NN \l__aoc_tmpa_ior \l__aoc_tmpa_tl
+    \tl_map_inline:Nn \l__aoc_tmpa_tl
+    {
+      \tl_set:cn {l__aoc_tmpa_ \int_eval:n {\int_mod:nn{\l__aoc_tmpa_int}{#1}} _tl} {##1}
+      \bool_set_false:N \l__aoc_tmpa_bool
+      \int_step_inline:nnn {1} {#1}
+      {
+        \tl_if_empty:cT {l__aoc_tmpa_ \int_eval:n {\int_mod:nn{####1}{#1}} _tl}
+        {
+          \bool_set_true:N \l__aoc_tmpa_bool
+        }
+      }
+      \int_step_inline:nnn {1}{#1-1}
+      {
+        \int_step_inline:nnn {####1+1}{#1}
+        {
+          \tl_if_eq:ccT
+          {l__aoc_tmpa_ \int_eval:n {\int_mod:nn{####1}{#1}} _tl}
+          {l__aoc_tmpa_ \int_eval:n {\int_mod:nn{########1}{#1}} _tl}
+          {
+            \bool_set_true:N \l__aoc_tmpa_bool
+          }
+        }
+      }
+      \bool_if:NF \l__aoc_tmpa_bool
+      {
+        \tl_map_break:
+      }
+      \int_incr:N \l__aoc_tmpa_int
+    }
+    \int_incr:N \l__aoc_tmpa_int
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpa_int
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+
+\NewDocumentCommand \TuningTrouble {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {int} {TuningTrouble4}
+    {
+      \aoc_tuning:nn {4} {#2}
+    }
+  }
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {int} {TuningTrouble14}
+    {
+      \aoc_tuning:nn {14} {#2}
+    }
+  }
+  \int_use:N \g__aoc_output_int
+  \aoc_clear_outputs:
+}
+
 % Template
 
 \cs_new_protected_nopar:Npn \aoc_template:n #1
@@ -656,12 +732,22 @@
   \group_end:
 }
 
-\NewDocumentCommand \Template {m}
+\NewDocumentCommand \Template {s m}
 {
-  \bool_gset_true:N \g__aoc_regenerate_next_bool
-  \aoc_check_answer:nnn {tl} {Template}
+  \IfBooleanTF {#1}
   {
-    %
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {tl} {Template}
+    {
+      %
+    }
+  }
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {tl} {Template}
+    {
+      %
+    }
   }
   \tl_use:N \g__aoc_output_tl
   \aoc_clear_outputs:

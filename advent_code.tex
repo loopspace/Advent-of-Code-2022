@@ -114,4 +114,19 @@ So rather than having an actual sequence, I had macros of the form \Verb!\l__aoc
 \item With the CrateMaster9001, the top crates on the stacks were: \SupplyStacks{Day05}
 \end{enumerate}
 
+\section{Tuning Troubles}
+
+I spent too long with this one trying to get \TeX\ to read a file character by character.
+What I wanted was to read the characters and pass them to an auxiliary macro that tests them.
+I got as far as reading in the individual characters, but it turns out that the end-of-file character is \Verb!\outer! and can't be passed to a macro, so I would have to use a \Verb!\let! to get the next token and work with it.
+Although there are the \Verb!\peek_after! macros, I couldn't figure out the right way to do it.
+So in the end I gave up and read the whole file in to a token list and then stepped through that.
+After that, it was relatively straightforward -- except that for the ``easy'' version then I hard-coded the tests and then had to reimplement them in loops for the second version.
+
+
+\begin{enumerate}
+\item The first start-of-packet marker is at \TuningTrouble*{Day06}
+\item The first start-of-message marker is at \TuningTrouble{Day06}
+\end{enumerate}
+
 \end{document}
