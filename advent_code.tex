@@ -129,4 +129,18 @@ After that, it was relatively straightforward -- except that for the ``easy'' ve
 \item The first start-of-message marker is at \TuningTrouble{Day06}
 \end{enumerate}
 
+\section{Device Left on Space}
+
+This one \emph{just worked}.
+Well, once I'd sorted out the various methods for \Verb!prop!s, that is.
+I used a sequence to keep track of the current directory, then as I descended into a directory, I'd zero a counter, add up the file sizes in that directory using that counter, and then store the sum in a prop indexed by the full directory paths.
+When exiting a directory, I'd take the size for that directory and add it to whatever had already been calculated for its parent.
+This ensured that subdirectory sizes propagated up to their parents.
+After that, it was just a matter of sifting through the \Verb!prop! to find the answers sought.
+
+\begin{enumerate}
+\item The size of the small directories is \DeviceSpace*{Day07}
+\item The size of the directory to delete is \DeviceSpace{Day07}
+\end{enumerate}
+
 \end{document}

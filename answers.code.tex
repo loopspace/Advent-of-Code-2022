@@ -7,7 +7,12 @@
 \cs_generate_variant:Nn \tl_if_in:nnTF {Vn}
 \cs_generate_variant:Nn \tl_if_in:nnT {Vn}
 \cs_generate_variant:Nn \tl_if_in:nnF {Vn}
-
+\cs_generate_variant:Nn \tl_if_eq:nnTF {Vn}
+\cs_generate_variant:Nn \tl_if_eq:nnT {Vn}
+\cs_generate_variant:Nn \tl_if_eq:nnF {Vn}
+\cs_generate_variant:Nn \prop_put:Nnn {Nxn}
+\cs_generate_variant:Nn \prop_item:Nn {Nx}
+\cs_generate_variant:Nn \prop_get:NnN {NxN}
 
 % These are our output stack variables
 \tl_new:N \g__aoc_output_tl
@@ -695,17 +700,172 @@
 {
   \IfBooleanTF {#1}
   {
-    \bool_gset_true:N \g__aoc_regenerate_next_bool
     \aoc_check_answer:nnn {int} {TuningTrouble4}
     {
       \aoc_tuning:nn {4} {#2}
     }
   }
   {
-    \bool_gset_true:N \g__aoc_regenerate_next_bool
     \aoc_check_answer:nnn {int} {TuningTrouble14}
     {
       \aoc_tuning:nn {14} {#2}
+    }
+  }
+  \int_use:N \g__aoc_output_int
+  \aoc_clear_outputs:
+}
+
+% Device Left on Space
+
+\cs_new_protected_nopar:Npn \aoc_device_space:nn #1#2
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#2 .txt}
+  {
+    
+    \seq_clear:N \l__aoc_tmpa_seq
+    \int_zero:N \l__aoc_tmpa_int
+    \prop_clear:N \l__aoc_tmpa_prop
+    
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \tl_set:Nn \l__aoc_tmpa_tl {##1}
+      \tl_if_head_eq_catcode:nNTF {##1} \c_math_toggle_token
+      {
+        \tl_set:Nx \l__aoc_tmpa_tl {\tl_tail:N \l__aoc_tmpa_tl}
+        \tl_set:Nx \l__aoc_tmpb_tl {
+          \tl_item:Nn \l__aoc_tmpa_tl {1}
+          \tl_item:Nn \l__aoc_tmpa_tl {2}
+        }
+        \tl_if_eq:VnT \l__aoc_tmpb_tl {cd}
+        {
+          \tl_set:Nx \l__aoc_tmpa_tl {\tl_tail:N \l__aoc_tmpa_tl}
+          \tl_set:Nx \l__aoc_tmpa_tl {\tl_tail:N \l__aoc_tmpa_tl}
+          \tl_trim_spaces:N \l__aoc_tmpa_tl
+          \tl_if_eq:VnTF \l__aoc_tmpa_tl {..}
+          {
+            % This is the signal that we're done with a directory
+            % Store the current size in the prop for that directory
+            \prop_put:NxV \l__aoc_tmpa_prop
+            {
+              \seq_use:Nn \l__aoc_tmpa_seq {-}
+            }
+            \l__aoc_tmpa_int
+
+            % Step up one level in the tree
+            \seq_pop_right:NN \l__aoc_tmpa_seq \l__aoc_tmpc_tl
+
+            % Add the current size to the parent directory
+            \prop_get:NxN \l__aoc_tmpa_prop {\seq_use:Nn \l__aoc_tmpa_seq {-}} \l__aoc_tmpd_tl
+            \int_add:Nn \l__aoc_tmpa_int
+            {
+              \l__aoc_tmpd_tl
+            }
+          }
+          {
+            % Store the current size in the prop for this directory
+            \prop_put:NxV \l__aoc_tmpa_prop
+            {
+              \seq_use:Nn \l__aoc_tmpa_seq {-}
+            }
+            \l__aoc_tmpa_int
+
+            % Descend one more step
+            \seq_put_right:NV \l__aoc_tmpa_seq \l__aoc_tmpa_tl
+            % Clear the size counter
+            \int_zero:N \l__aoc_tmpa_int
+            % Zero the size store
+            \prop_put:Nxn \l__aoc_tmpa_prop {\seq_use:Nn \l__aoc_tmpa_seq {-}} {0}
+          }
+        }
+      }
+      {
+        \tl_if_head_eq_catcode:nNT {##1} \c_catcode_other_token
+        {
+          % digit, increment the current size
+          \seq_set_split:Nnn \l__aoc_tmpb_seq {~} {##1}
+          \int_add:Nn \l__aoc_tmpa_int {\seq_item:Nn \l__aoc_tmpb_seq {1}}
+        }
+      }
+    }
+    \ior_close:N \l__aoc_tmpa_ior
+
+    \prg_replicate:nn {\seq_count:N \l__aoc_tmpa_seq}
+    {
+      \prop_put:NxV \l__aoc_tmpa_prop
+      {
+        \seq_use:Nn \l__aoc_tmpa_seq {-}
+      }
+      \l__aoc_tmpa_int
+
+      % Step up one level in the tree
+      \seq_pop_right:NN \l__aoc_tmpa_seq \l__aoc_tmpc_tl
+
+      % Add the current size to the parent directory
+      \prop_get:NxN \l__aoc_tmpa_prop {\seq_use:Nn \l__aoc_tmpa_seq {-}} \l__aoc_tmpd_tl
+      \int_add:Nn \l__aoc_tmpa_int
+      {
+        \l__aoc_tmpd_tl
+      }
+    }
+
+    \tl_if_eq:nnTF {#1}{A}
+    {
+      \int_zero:N \l__aoc_tmpa_int
+      \prop_map_inline:Nn \l__aoc_tmpa_prop
+      {
+        \int_compare:nT {##2 <= 100000 }
+        {
+          \int_add:Nn \l__aoc_tmpa_int {##2}
+        }
+      }
+      \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpa_int
+    }
+    {
+
+      \prop_get:NnN \l__aoc_tmpa_prop {/} \l__aoc_tmpa_tl
+      \int_set:Nn \l__aoc_tmpb_int {30000000 - (70000000 - \l__aoc_tmpa_tl)}
+
+      \int_set:Nn \l__aoc_tmpc_int {\l__aoc_tmpa_tl}
+      \prop_map_inline:Nn \l__aoc_tmpa_prop
+      {
+        \bool_if:nT
+        {
+          \int_compare_p:n {##2 >= \l__aoc_tmpb_int }
+          &&
+          \int_compare_p:n {##2 < \l__aoc_tmpc_int }
+        }        
+        {
+          \int_set:Nn \l__aoc_tmpc_int {##2}
+        }
+      }
+
+      \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpc_int
+    }
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\NewDocumentCommand \DeviceSpace {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {int} {DeviceSpaceA}
+    {
+      \aoc_device_space:nn {A} {#2}
+    }
+  }
+  {
+    \bool_gset_true:N \g__aoc_regenerate_next_bool
+    \aoc_check_answer:nnn {int} {DeviceSpaceB}
+    {
+      \aoc_device_space:nn {B} {#2}
     }
   }
   \int_use:N \g__aoc_output_int
