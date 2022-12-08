@@ -855,14 +855,12 @@
 {
   \IfBooleanTF {#1}
   {
-    \bool_gset_true:N \g__aoc_regenerate_next_bool
     \aoc_check_answer:nnn {int} {DeviceSpaceA}
     {
       \aoc_device_space:nn {A} {#2}
     }
   }
   {
-    \bool_gset_true:N \g__aoc_regenerate_next_bool
     \aoc_check_answer:nnn {int} {DeviceSpaceB}
     {
       \aoc_device_space:nn {B} {#2}
