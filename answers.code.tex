@@ -1,5 +1,15 @@
 \ExplSyntaxOn
 
+% Useful to know this
+\DeclareDocumentCommand \MaxInt {}
+{
+  \int_use:N \c_max_int
+}
+\DeclareDocumentCommand \MaxIntarray {}
+{
+  \int_eval:n {\c_max_int/2 - 1}
+}
+
 % Variants of standard functions
 
 \cs_generate_variant:Nn \file_get:nnNT {VnNT}
@@ -42,6 +52,9 @@
 \seq_new:N \l__aoc_tmpa_seq
 \seq_new:N \l__aoc_tmpb_seq
 \seq_new:N \l__aoc_tmpc_seq
+\seq_new:N \l__aoc_tmpd_seq
+\seq_new:N \l__aoc_tmpe_seq
+\seq_new:N \l__aoc_tmpf_seq
 
 \dim_new:N \l__aoc_tmpa_dim
 \dim_new:N \l__aoc_tmpb_dim
@@ -76,6 +89,168 @@
 { missing file }
 { File~ #1~ doesn't~ exist~ \msg_line_context:}
 
+
+% Additional data structures
+
+% Grid structure is linearised to an intarray, therefore has to be
+% global.  Store the dimensions in the first two elements so then
+% everything else needs an offset of 2
+%
+% Now, I think of an (m,n) matrix as having m rows and n columns, so
+% the (i,j)th element is in the ith row and the jth column.  We'll
+% define a grid using the row-major convention since the likelihood is
+% that the grid will be read in from a file.
+%
+% intarray's are 1-based, so the grids are also 1-based.  So given a
+% pair (i,j), the corresponding index is:
+%
+% n*(i-1) + j
+%
+% It needs a check to ensure that i and j are within the required range
+
+\msg_new:nnn
+{ advent }
+{ grid range }
+{ Index~ #1~ out~ of~ range~ at~ \msg_line_context:}
+
+\cs_new_protected_nopar:Npn \grid_new:Nnn #1#2#3
+{
+  \intarray_new:Nn #1 {(#2)*(#3) + 2}
+  \intarray_gset:Nnn #1 {1} {#2} % Number of rows
+  \intarray_gset:Nnn #1 {2} {#3} % Number of columns
+}
+
+\cs_generate_variant:Nn \grid_new:Nnn {NVV}
+
+% Clear a grid, but keep the dimensions
+\cs_new_protected_nopar:Npn \grid_gclear:N #1
+{
+  \group_begin:
+  \int_set:Nn \l__aoc_tmpa_int {\intarray_item:Nn #1 {1}}
+  \int_set:Nn \l__aoc_tmpb_int {\intarray_item:Nn #1 {2}}
+  \intarray_gzero:N #1
+  \intarray_gset:Nnn #1 {1} {\l__aoc_tmpa_int}
+  \intarray_gset:Nnn #1 {2} {\l__aoc_tmpb_int}
+  \group_end:
+}
+
+% Set an element, but check the range
+\cs_new_protected_nopar:Npn \grid_gset:Nnnn #1#2#3#4
+{
+  \grid_if_in_range:NnnTF #1{#2}{#3}
+  {
+    \intarray_gset:Nnn #1
+    {
+      (\intarray_item:Nn #1 {2}) * (#2 - 1)
+      +
+      (#3)
+      +
+      2
+    }
+    {
+      #4
+    }
+  }
+  {
+    \msg_warning:nnn { advent } { grid range } { (#2,#3) }
+  }
+}
+
+\cs_generate_variant:Nn \grid_gset:Nnnn {NVVn, NnnV, NVVV}
+
+
+% Get an element, but check the range
+\cs_new_protected_nopar:Npn \grid_item:Nnn #1#2#3
+{
+  \grid_if_in_range:NnnTF #1{#2}{#3}
+  {
+    \intarray_item:Nn #1
+    {
+      (\intarray_item:Nn #1 {2}) * (#2 - 1)
+      +
+      (#3)
+      +
+      2
+    }
+  }
+  {
+    \msg_warning:nnn { advent } { grid range } { (#2,#3) }
+  }
+}
+
+% Get an element into an integer register, but check the range
+\cs_new_protected_nopar:Npn \grid_item:NNnn #1#2#3#4
+{
+  \grid_if_in_range:NnnTF #2{#3}{#4}
+  {
+    \int_set:Nn #1
+    {
+      \intarray_item:Nn #2
+      {
+        (\intarray_item:Nn #2 {2}) * (#3 - 1)
+        +
+        (#4)
+        +
+        2
+      }
+    }
+  }
+  {
+    \msg_warning:nnn { advent } { grid range } { (#3,#4) }
+  }
+}
+
+\cs_generate_variant:Nn \grid_item:Nnn {NVV}
+
+% Get the number of rows or columns
+\cs_new_protected_nopar:Npn \grid_rows:N #1
+{
+  \intarray_item:Nn #1 {1}
+}
+\cs_new_protected_nopar:Npn \grid_columns:N #1
+{
+  \intarray_item:Nn #1 {2}
+}
+
+% Check range
+\prg_new_protected_conditional:Npnn \grid_if_in_range:Nnn #1#2#3 {T,F,TF}
+{
+  \bool_if:nTF
+  {
+    \int_compare_p:n {1 <= #2}
+    &&
+    \int_compare_p:n {#2 <= \intarray_item:Nn #1 {1} } % Number of rows
+    &&
+    \int_compare_p:n {1 <= #3}
+    &&
+    \int_compare_p:n {#3 <= \intarray_item:Nn #1 {2} } % Number of columns
+  }
+  {
+    \prg_return_true:
+  }
+  {
+    \prg_return_false:
+  }
+}
+
+% Show a grid
+\cs_new_protected_nopar:Npn \grid_show:N #1
+{
+  \group_begin:
+  \iow_term:x {The~ grid~ \token_to_str:N #1~ contains:}
+  \int_step_inline:nnn {1} {\grid_rows:N #1}
+  {
+    \tl_clear:N \l__aoc_tmpa_tl
+    \int_step_inline:nnn {1} {\grid_columns:N #1}
+    {
+      \grid_item:NNnn \l__aoc_tmpa_int #1 {##1} {####1}
+      \tl_put_right:Nx \l__aoc_tmpa_tl {,\int_use:N \l__aoc_tmpa_int}
+    }
+    \tl_set:Nx \l__aoc_tmpa_tl {\tl_tail:N \l__aoc_tmpa_tl}
+    \iow_term:x {\tl_use:N \l__aoc_tmpa_tl}
+  }
+  \group_end:
+}
 
 % Caching
 
@@ -159,6 +334,9 @@
   \group_end:
 }
 \cs_generate_variant:Nn \_aoc_check_answer:nnn {nVn,nxn}
+
+
+
 
 
 % Day 01: Counting Calories
@@ -870,6 +1048,471 @@
   \aoc_clear_outputs:
 }
 
+% Treetop Tree House
+
+\grid_new:Nnn \g__aoc_trees_grid {99}{99}
+\grid_new:Nnn \g__aoc_visible_grid {99}{99}
+
+\cs_new_protected_nopar:Npn \aoc_treetop:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \grid_gclear:N \g__aoc_trees_grid
+    \grid_gclear:N \g__aoc_visible_grid
+    \int_zero:N \l__aoc_tmpa_int
+    \int_zero:N \l__aoc_tmpb_int
+    % Read in the data from the file and create an array from it
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \int_incr:N \l__aoc_tmpa_int
+      \int_zero:N \l__aoc_tmpb_int
+      \tl_map_inline:nn {##1}
+      {
+        \int_incr:N \l__aoc_tmpb_int
+        \grid_gset:NVVn \g__aoc_trees_grid
+        \l__aoc_tmpa_int \l__aoc_tmpb_int {####1}
+      }
+    }
+    \ior_close:N \l__aoc_tmpa_ior
+
+    % Now iterate through each row and column and find how many trees
+    % are visible from each direction
+    \int_step_inline:nnn {1} {99} {
+      \int_set:Nn \l__aoc_tmpb_int {-1}
+      \int_set:Nn \l__aoc_tmpc_int {-1}
+      \int_set:Nn \l__aoc_tmpd_int {-1}
+      \int_set:Nn \l__aoc_tmpe_int {-1}
+      \int_step_inline:nnn {1} {99} {
+        \aoc_treetop_aux:Nnn \l__aoc_tmpb_int {##1}{####1}
+        \aoc_treetop_aux:Nnn \l__aoc_tmpc_int {####1}{##1}
+        \aoc_treetop_aux:Nnn \l__aoc_tmpd_int {##1}{100 - ####1}
+        \aoc_treetop_aux:Nnn \l__aoc_tmpe_int {100 - ####1}{##1}
+      }
+    }
+    \int_zero:N \l__aoc_tmpa_int
+    \int_step_inline:nnn {1} {99} {
+      \int_step_inline:nnn {1} {99} {
+        \int_add:Nn \l__aoc_tmpa_int
+        {
+          \grid_item:Nnn \g__aoc_visible_grid {##1} {####1}
+        }
+      }
+    }
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpa_int
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\cs_new_protected_nopar:Npn \aoc_treetop_aux:Nnn #1#2#3
+{
+  \int_compare:nT
+  {
+    \grid_item:Nnn \g__aoc_trees_grid {#2} {#3}
+    >
+    #1
+  }
+  {
+    \grid_gset:Nnnn \g__aoc_visible_grid {#2} {#3} {1}
+    \int_set:Nn #1
+    {
+      \grid_item:Nnn \g__aoc_trees_grid {#2} {#3}
+    }
+  }
+}
+
+% We'll use four grids to store the directions
+
+\int_new:N \g__aoc_grid_size_int
+\int_set:Nn \g__aoc_grid_size_int {99} % {5}
+\grid_new:NVV \g__aoc_left_grid \g__aoc_grid_size_int \g__aoc_grid_size_int
+\grid_new:NVV \g__aoc_right_grid \g__aoc_grid_size_int \g__aoc_grid_size_int
+\grid_new:NVV \g__aoc_up_grid \g__aoc_grid_size_int \g__aoc_grid_size_int
+\grid_new:NVV \g__aoc_down_grid \g__aoc_grid_size_int \g__aoc_grid_size_int
+
+\cs_new_protected_nopar:Npn \aoc_scenic_treetop:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \grid_gclear:N \g__aoc_trees_grid
+    \grid_gclear:N \g__aoc_visible_grid
+    \int_zero:N \l__aoc_tmpa_int
+    \int_zero:N \l__aoc_tmpb_int
+    \int_zero:N \l__aoc_tmpc_int
+    % Read in the data from the file and create an array from it
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \int_incr:N \l__aoc_tmpa_int
+      \int_zero:N \l__aoc_tmpb_int
+      \tl_map_inline:nn {##1}
+      {
+        \int_incr:N \l__aoc_tmpb_int
+        \grid_gset:NVVn \g__aoc_trees_grid
+        \l__aoc_tmpa_int \l__aoc_tmpb_int {####1}
+        % Initialise the distance grids so that by default they contain the distances to the edges of the grid.
+        \grid_gset:NVVn \g__aoc_left_grid \l__aoc_tmpa_int \l__aoc_tmpb_int
+        {\l__aoc_tmpb_int - 1} % number of trees to the left
+        \grid_gset:NVVn \g__aoc_right_grid \l__aoc_tmpa_int \l__aoc_tmpb_int
+        {(\g__aoc_grid_size_int - \l__aoc_tmpb_int)} % number of trees to the right
+        \grid_gset:NVVn \g__aoc_up_grid \l__aoc_tmpa_int \l__aoc_tmpb_int
+        {(\l__aoc_tmpa_int - 1)} % number of trees above
+        \grid_gset:NVVn \g__aoc_down_grid \l__aoc_tmpa_int \l__aoc_tmpb_int
+        {(\g__aoc_grid_size_int - \l__aoc_tmpa_int)} % number of trees below
+      }
+    }
+    \ior_close:N \l__aoc_tmpa_ior
+%    \grid_show:N \g__aoc_left_grid
+%    \grid_show:N \g__aoc_right_grid
+%    \grid_show:N \g__aoc_up_grid
+%    \grid_show:N \g__aoc_down_grid
+
+    \iow_term:n {Finished~ reading~ file}
+
+    % As we step along each row and column, we keep track of the location of the most recently found tree of the given height.
+    \int_step_inline:nnnn {9} {-1} {0} { % Iterate through the heights
+      % Iterate through the rows and columns
+      \iow_term:n {Parsing~ height~ ##1}
+      \int_step_inline:nnn {1} {\g__aoc_grid_size_int} {
+        % These keep track of our current tree of the given height
+        \int_set:Nn \l__aoc_tmpb_int {1}
+        \int_set:Nn \l__aoc_tmpc_int {1}
+        \int_set:Nn \l__aoc_tmpd_int {\g__aoc_grid_size_int}
+        \int_set:Nn \l__aoc_tmpe_int {\g__aoc_grid_size_int}
+        % Iterate along each row and column, from each direction
+        \int_step_inline:nnn {1} {\g__aoc_grid_size_int} {
+          
+          \aoc_scenic_treetop_aux:NNnnnn
+          \g__aoc_left_grid
+          \l__aoc_tmpb_int {##1} {0} {####1}{########1}
+          
+          \aoc_scenic_treetop_aux:NNnnnn
+          \g__aoc_up_grid
+          \l__aoc_tmpc_int {##1} {1} {########1}{####1}
+          
+          \aoc_scenic_treetop_aux:NNnnnn
+          \g__aoc_right_grid
+          \l__aoc_tmpd_int {##1} {0} {####1}{\g__aoc_grid_size_int+1 - ########1}
+          
+          \aoc_scenic_treetop_aux:NNnnnn
+          \g__aoc_down_grid
+          \l__aoc_tmpe_int {##1} {1} {\g__aoc_grid_size_int+1 - ########1}{####1}
+        }
+      }
+    }
+%    \grid_show:N \g__aoc_left_grid
+%    \grid_show:N \g__aoc_right_grid
+%    \grid_show:N \g__aoc_up_grid
+%    \grid_show:N \g__aoc_down_grid
+    \int_zero:N \l__aoc_tmpa_int
+    \int_step_inline:nnn {1} {\g__aoc_grid_size_int} {
+      \int_step_inline:nnn {1} {\g__aoc_grid_size_int} {
+        \int_set:Nn \l__aoc_tmpa_int
+        {
+          \int_max:nn {\l__aoc_tmpa_int}
+          {
+            \grid_item:Nnn \g__aoc_left_grid {##1} {####1}
+            *
+            \grid_item:Nnn \g__aoc_right_grid {##1} {####1}
+            *
+            \grid_item:Nnn \g__aoc_up_grid {##1} {####1}
+            *
+            \grid_item:Nnn \g__aoc_down_grid {##1} {####1}
+          }
+        }
+      }
+    }
+    \int_gset_eq:NN \g__aoc_output_int \l__aoc_tmpa_int
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+% Parameters:
+% Grid to save the distances in
+% Location of most recent tree of given height
+% Current height
+% Direction (horizontal/vertical)
+% Coordinates
+\cs_new_protected_nopar:Npn \aoc_scenic_treetop_aux:NNnnnn #1#2#3#4#5#6
+{
+  % Is the current tree of the right height?
+  \int_compare:nT { \grid_item:Nnn \g__aoc_trees_grid {#5}{#6} = #3}
+  {
+    % yes, current tree is the current height
+    \int_compare:nTF {#4 = 0}
+    { % horizontal
+      \grid_gset:Nnnn #1 {#5}{#6}
+      {
+        \int_abs:n {#6 - #2}
+      }
+    }
+    { % vertical
+      \grid_gset:Nnnn #1 {#5}{#6}
+      {
+        \int_abs:n {#5 - #2}
+      }
+    }
+  }
+  \int_compare:nT { \grid_item:Nnn \g__aoc_trees_grid {#5}{#6} >= #3}
+  {
+    % current tree is at least the current height, so we update the location register
+    \int_compare:nTF {#4 = 0}
+    { % horizontal
+      \int_set:Nn #2 { #6}
+    }
+    { % vertical
+      \int_set:Nn #2 { #5}
+    }
+  }
+}
+
+
+\NewDocumentCommand \Treetop {s m}
+{
+  \IfBooleanTF {#1}
+  {
+    \aoc_check_answer:nnn {int} {Treetop}
+    {
+      \aoc_treetop:n {#2}
+    }
+  }
+  {
+    \aoc_check_answer:nnn {int} {Scenic}
+    {
+      \aoc_scenic_treetop:n {#2}
+    }
+  }
+  \int_use:N \g__aoc_output_int
+  \aoc_clear_outputs:
+}
+
+
+% Rope Bridge
+
+\cs_new_protected_nopar:Npn \aoc_ropebridge:n #1
+{
+  \group_begin:
+  % Try to open the file
+  \ior_open:NnTF \l__aoc_tmpa_ior {#1 .txt}
+  {
+    \seq_clear:N \l__aoc_tmpa_seq % locations of second knot
+    \seq_clear:N \l__aoc_tmpf_seq % locations of last knot
+    \seq_clear:N \l__aoc_tmpb_seq % x--coordinates
+    \seq_clear:N \l__aoc_tmpc_seq % y--coordinates
+    \prg_replicate:nn {10}
+    {
+      \seq_put_right:Nn \l__aoc_tmpb_seq {0}
+      \seq_put_right:Nn \l__aoc_tmpc_seq {0}
+    }
+    \iow_term:n {Processing~file}
+    \int_zero:N \l__aoc_tmpa_int
+    \int_set:Nn \l__aoc_tmpb_int {\sys_timer:}
+    \ior_map_inline:Nn \l__aoc_tmpa_ior
+    {
+      \aoc_ropebridge_aux:w ##1 \q_stop
+      \int_incr:N \l__aoc_tmpa_int
+      \int_compare:nT {\int_mod:nn {\l__aoc_tmpa_int} {20} = 0}
+      {
+        \iow_term:x {Processed~ line~ \int_use:N \l__aoc_tmpa_int\c_space_tl~ in~ \int_eval:n {(\sys_timer: - \l__aoc_tmpb_int)/65536}}
+        \int_set:Nn \l__aoc_tmpb_int {\sys_timer:}
+      }
+    }
+    \ior_close:N \l__aoc_tmpa_ior
+    \iow_term:n {File~ processed}
+    \seq_gclear:N \g__aoc_output_seq
+    \seq_gput_right:Nx \g__aoc_output_seq
+    {\seq_count:N \l__aoc_tmpa_seq}
+    \seq_gput_right:Nx \g__aoc_output_seq
+    {\seq_count:N \l__aoc_tmpf_seq}
+  }
+  {
+    % If there was a problem with the file
+    \msg_warning:nnn { advent } { missing file } {#1}
+  }
+  \group_end:
+}
+
+\tl_const:Nn \c__aoc_R_tl {R}
+\tl_const:Nn \c__aoc_L_tl {L}
+\tl_const:Nn \c__aoc_D_tl {D}
+\tl_const:Nn \c__aoc_U_tl {U}
+\cs_new_protected_nopar:Npn \aoc_ropebridge_aux:w #1#2 \q_stop
+{
+  % Save the motion to a token list for comparison
+  \tl_set:Nn \l__aoc_tmpa_tl {#1}
+  \prg_replicate:nn {#2}
+  {
+    % Clear the scratch sequences for the coordinates
+    \seq_clear:N \l__aoc_tmpd_seq
+    \seq_clear:N \l__aoc_tmpe_seq
+    % Move the head
+    \tl_case:Nn \l__aoc_tmpa_tl
+    {
+      \c__aoc_R_tl
+      {
+        \seq_put_right:Nx \l__aoc_tmpd_seq
+        {
+          \int_eval:n {\seq_item:Nn \l__aoc_tmpb_seq {1} + 1}
+        }
+        \seq_put_right:Nx \l__aoc_tmpe_seq
+        {
+          \seq_item:Nn \l__aoc_tmpc_seq {1}
+        }
+      }
+      \c__aoc_L_tl
+      {
+        \seq_put_right:Nx \l__aoc_tmpd_seq
+        {
+          \int_eval:n {\seq_item:Nn \l__aoc_tmpb_seq {1} - 1}
+        }
+        \seq_put_right:Nx \l__aoc_tmpe_seq
+        {
+          \seq_item:Nn \l__aoc_tmpc_seq {1}
+        }
+      }
+      \c__aoc_U_tl
+      {
+        \seq_put_right:Nx \l__aoc_tmpd_seq
+        {
+          \seq_item:Nn \l__aoc_tmpb_seq {1}
+        }
+        \seq_put_right:Nx \l__aoc_tmpe_seq
+        {
+          \int_eval:n {\seq_item:Nn \l__aoc_tmpc_seq {1} + 1}
+        }
+      }
+      \c__aoc_D_tl
+      {
+        \seq_put_right:Nx \l__aoc_tmpd_seq
+        {
+          \seq_item:Nn \l__aoc_tmpb_seq {1}
+        }
+        \seq_put_right:Nx \l__aoc_tmpe_seq
+        {
+          \int_eval:n {\seq_item:Nn \l__aoc_tmpc_seq {1} - 1}
+        }
+      }
+    }
+    \int_step_inline:nnn {2} {10}
+    {
+      % Does the next knot need to move?
+      % Compare the l^infty distance
+      \int_compare:nTF
+      {
+        \int_max:nn
+        {
+          \int_abs:n {
+            \seq_item:Nn \l__aoc_tmpb_seq {##1}
+            -
+            \seq_item:Nn \l__aoc_tmpd_seq {##1 - 1}
+          }
+        }
+        {
+          \int_abs:n {
+            \seq_item:Nn \l__aoc_tmpc_seq {##1}
+            -
+            \seq_item:Nn \l__aoc_tmpe_seq {##1 - 1}
+          }
+        }
+        > 1
+      }
+      {
+        % move the knot towards the previous one
+        \seq_put_right:Nx \l__aoc_tmpd_seq
+        {
+          \seq_item:Nn \l__aoc_tmpb_seq {##1}
+          +
+          \int_sign:n
+          {
+            \seq_item:Nn \l__aoc_tmpd_seq {##1 - 1}
+            -
+            \seq_item:Nn \l__aoc_tmpb_seq {##1}
+          }
+        }
+        \seq_put_right:Nx \l__aoc_tmpe_seq
+        {
+          \seq_item:Nn \l__aoc_tmpc_seq {##1}
+          +
+          \int_sign:n
+          {
+            \seq_item:Nn \l__aoc_tmpe_seq {##1 - 1}
+            -
+            \seq_item:Nn \l__aoc_tmpc_seq {##1}
+          }
+        }
+      }
+      {
+        % No movement, copy the coordinates
+        \seq_put_right:Nx \l__aoc_tmpd_seq
+        {
+          \seq_item:Nn \l__aoc_tmpb_seq {##1}
+        }
+        \seq_put_right:Nx \l__aoc_tmpe_seq
+        {
+          \seq_item:Nn \l__aoc_tmpc_seq {##1}
+        }
+      }
+    }
+    \seq_set_eq:NN \l__aoc_tmpb_seq \l__aoc_tmpd_seq
+    \seq_set_eq:NN \l__aoc_tmpc_seq \l__aoc_tmpe_seq
+    \seq_if_in:NxF \l__aoc_tmpa_seq {
+      \seq_item:Nn \l__aoc_tmpb_seq {2},
+      \seq_item:Nn \l__aoc_tmpc_seq {2}
+    }
+    {
+      \seq_put_right:Nx \l__aoc_tmpa_seq {
+        \seq_item:Nn \l__aoc_tmpb_seq {2},
+        \seq_item:Nn \l__aoc_tmpc_seq {2}
+      }
+    }
+    \seq_if_in:NxF \l__aoc_tmpf_seq {
+      \seq_item:Nn \l__aoc_tmpb_seq {10},
+      \seq_item:Nn \l__aoc_tmpc_seq {10}
+    }
+    {
+      \seq_put_right:Nx \l__aoc_tmpf_seq {
+        \seq_item:Nn \l__aoc_tmpb_seq {10},
+        \seq_item:Nn \l__aoc_tmpc_seq {10}
+      }
+    }
+  }
+}
+
+\prop_gremove:Nn \g__aoc_answers_prop {RopeBridgeTail}
+\prop_gremove:Nn \g__aoc_answers_prop {SupplyStack}
+\prop_gremove:Nn \g__aoc_answers_prop {TuningTrouble}
+\prop_gremove:Nn \g__aoc_answers_prop {DeviceSpace}
+
+
+\NewDocumentCommand \RopeBridge {s m}
+{
+  \bool_gset_true:N \g__aoc_regenerate_next_bool
+  \aoc_check_answer:nnn {seq} {RopeBridge}
+  {
+    \aoc_ropebridge:n {#2}
+  }
+  \IfBooleanTF {#1}
+  {
+    \seq_item:Nn \g__aoc_output_seq {1}
+  }
+  {
+    \seq_item:Nn \g__aoc_output_seq {2}
+  }
+  \aoc_clear_outputs:
+}
+
+
+
 % Template
 
 \cs_new_protected_nopar:Npn \aoc_template:n #1
@@ -880,7 +1523,7 @@
   {
     \ior_map_inline:Nn \l__aoc_tmpa_ior
     {
-    }      
+    }
     \ior_close:N \l__aoc_tmpa_ior
   }
   {

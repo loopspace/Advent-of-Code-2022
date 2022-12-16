@@ -29,6 +29,8 @@ This is my attempt to solve the Advent of Code 2022 problems in \LaTeX3.
 Following from last year, I'm abandoning the \Verb!dtx! file format and using just a normal \LaTeX\ file and will input a \LaTeX3 file that actually contains the code.
 From the outset I'm also using the caching system that I developed during last year's calendar.
 
+It's useful to know that the maximum number that the \Verb!int! variable type can hold is \MaxInt\ and an \Verb!intarray! can hold \MaxIntarray.
+
 
 \section{Solutions}
 
@@ -114,7 +116,7 @@ So rather than having an actual sequence, I had macros of the form \Verb!\l__aoc
 \item With the CrateMaster9001, the top crates on the stacks were: \SupplyStacks{Day05}
 \end{enumerate}
 
-\section{Tuning Troubles}
+\subsection{Tuning Troubles}
 
 I spent too long with this one trying to get \TeX\ to read a file character by character.
 What I wanted was to read the characters and pass them to an auxiliary macro that tests them.
@@ -129,7 +131,7 @@ After that, it was relatively straightforward -- except that for the ``easy'' ve
 \item The first start-of-message marker is at \TuningTrouble{Day06}
 \end{enumerate}
 
-\section{Device Left on Space}
+\subsection{Device Left on Space}
 
 This one \emph{just worked}.
 Well, once I'd sorted out the various methods for \Verb!prop!s, that is.
@@ -141,6 +143,69 @@ After that, it was just a matter of sifting through the \Verb!prop! to find the 
 \begin{enumerate}
 \item The size of the small directories is \DeviceSpace*{Day07}
 \item The size of the directory to delete is \DeviceSpace{Day07}
+\end{enumerate}
+
+\subsection{Treetop Tree House}
+
+This is the one I've been dreading.
+\LaTeX3 isn't so great at nested data structures, so a \(2 \times 2\) grid is complicated to implement.
+The problem with making a sequence of sequences, which is how it would be done in most other languages, is that modifying an inner sequence isn't easy.
+One would have to extract the sequence, modify it, and then put it back.
+But \LaTeX3 doesn't have an easy way to set a specific item in a sequence (though there's a patch for that), so this would get complicated.
+There would also be a bit of subterfuge going on because the inner sequences would actually have to be stored as their underlying token lists, so it wouldn't be quite as natural as it should be.
+
+The alternative is to store the names of the inner sequences in the outer one, rather than the sequences themselves.
+This would make the methodology a bit easier, but the notation for referring to such a sequence would be complicated.
+
+Instead, I use a single dimensional (integer) array, but then need to use a complicated formula to convert a bi-index to a single number.
+As these structures occur frequently in these puzzles, I decided to define a wrapper structure around the underlying \Verb!intarray!, called a \Verb!grid!.
+The first two entries of the grid are its dimensions, and the implementation is row-major, so the formula for an index is \((i,j) \mapsto n(i-1) + j + 2\).
+
+For the first part, I iterated through each row and column and from each end marking a tree if it was visible from that direction.
+I had a second grid to keep track of the markings so that I could avoid double counting.
+
+For the second part, I thought to do something similar: have a second grid that kept track of how far could be seen from each tree in each direction.
+I wanted to be slightly more efficient with creating this grid than by picking each tree and then looking along its row and column, so I thought to start by recording how far each tree was from the highest possible tree, then from the second highest possible tree, and so on.
+
+More specifically, we start with the highest possible tree, \(9\), and scan across, say, a row.
+When we encounter a tree of height \(9\) then we record its location in a temporary register.
+As we move forward in the row, we then record the distance from that height \(9\) tree to the current tree until we reach a new tree of height \(9\) at which point we update our record to point to this tree instead (but only after having recorded the distance from the original tree to this one).
+
+On the next sweep, we work at height \(8\).
+We proceed as above, except that we don't update distances for trees of height \(9\), since they can see over trees of height \(8\), and we only update an existing distance if the distance to the height \(8\) tree is less than the already-recorded distance to a height \(9\) tree.
+
+
+This requires scanning each row ten times -- once for each height of tree --  and from each direction.
+Running the algorithm from the point of view of the source tree requires doing a scan starting from each tree along each direction.
+If the mean path length from each tree is more than \(10\) then my algorithm is more efficient.
+Nevertheless, it feels easier to code as there's less to keep track of!
+
+Each distance is a number in the range \(0\) to \(98\): a tree on the edge can see \(0\) trees on one side and up to \(98\) trees on the other.
+I thought initially to encode these in a single grid, which would mean writing them as an \(8\)--digit number.
+However, I'd have to be continually reading in that number, extracting the relevant digits, and then re-writing it back to the grid.
+This feels like more work than just having four grids, one for each direction.
+
+I used the test data to iron out a few bugs in my initial algorithm which mainly related to getting horizontal and vertical lined up correctly, and astonishingly once it worked for the test data then it worked for the full data.
+
+It's not the fastest algorithm ever, so I put a few ``see how far I've gotten'' messages on the terminal as it goes through.
+
+\begin{enumerate}
+\item The number of visible trees is \Treetop*{Day08}
+\item The best scenic score of trees is \Treetop{Day08}%-test}
+\end{enumerate}
+
+\subsection{Rope Bridge}
+
+The first part of this was straightforward.
+The tail of the rope moves if the \(\ell^\infty\) distance is at least \(2\), and then the amount it moves in each direction can be determined using the \Verb!\int_sign:n! function.
+Then I put all the locations in a sequence and ran the function that removes duplicates before counting the size of the sequence.
+
+Adapting to the longer rope wasn't too complicated, just meant promoting the integer registers to sequences.
+I did decide to test whether an element is in the sequence of locations before adding it so that the sequences of locations stay as short as possible.
+
+\begin{enumerate}
+\item The number of places the tail visits is \RopeBridge*{Day09}
+\item The number of places the tail visits is \RopeBridge{Day09}
 \end{enumerate}
 
 \end{document}
